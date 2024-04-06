@@ -19,3 +19,5 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/adshao/go-binance v2.0.0 => github.com/wangzheng2013/go-binance v2.1.1
