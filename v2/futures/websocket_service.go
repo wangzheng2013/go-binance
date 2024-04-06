@@ -109,6 +109,61 @@ func WsCombinedAggTradeServe(symbols []string, handler WsAggTradeHandler, errHan
 	return wsServe(cfg, wsHandler, errHandler)
 }
 
+type WsTradeEvent struct {
+	Event         string `json:"e"`
+	Time          int64  `json:"E"`
+	Symbol        string `json:"s"`
+	TradeID       int64  `json:"t"`
+	Price         string `json:"p"`
+	Quantity      string `json:"q"`
+	BuyerOrderId  int64  `json:"b"`
+	SellerOrderId int64  `json:"a"`
+	TradeTime     int64  `json:"T"`
+	IsBuyerMaker  bool   `json:"m"`
+	Placeholder   bool   `json:"M"` // add this field to avoid case insensitive unmarshaling
+}
+
+type WsCombinedTradeEvent struct {
+	Stream string       `json:"stream"`
+	Data   WsTradeEvent `json:"data"`
+}
+type WsTradeHandler func(event *WsTradeEvent)
+type WsCombinedTradeHandler func(event *WsCombinedTradeEvent)
+
+func WsTradeServe(symbol string, handler WsTradeHandler, errHandler ErrHandler) (doneCh, stopCh chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/%s@trade", getWsEndpoint(), strings.ToLower(symbol))
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		event := new(WsTradeEvent)
+		err := json.Unmarshal(message, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
+
+func WsCombinedTradeServe(symbols []string, handler WsCombinedTradeHandler, errHandler ErrHandler) (doneCh, stopCh chan struct{}, err error) {
+	endpoint := getWsEndpoint()
+	for _, s := range symbols {
+		endpoint += fmt.Sprintf("%s@trade/", strings.ToLower(s))
+	}
+	endpoint = endpoint[:len(endpoint)-1]
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		event := new(WsCombinedTradeEvent)
+		err := json.Unmarshal(message, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
+
 // WsMarkPriceEvent define websocket markPriceUpdate event.
 type WsMarkPriceEvent struct {
 	Event                string `json:"e"`
